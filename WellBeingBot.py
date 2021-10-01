@@ -9,28 +9,30 @@ class WellBeingBot:
         self.users_to_points = {}
         # { userID <string>: name <string> }
         self.user_id_to_real_name = {}
-
+        self.excluded_users = set(["U02FU4B08CX", "USLACKBOT"])
         # Wellness tasks that'll be randomly selected daily.
+        self.currentTask = 0
         self.wellness_tasks = [
-          'Go outside and take a walk.', 
-          'Read at least 10 pages of a book.',
-          'Hang out with a workmate.',
-          'Try a new restaurant.',
-          'Go for a bike ride.',
-          'Share a pic of your favorite hobby.',
-          'Switch it up & try a new workspace (i.e. coffee shop, living room, etc.)',
-          'Post a funny meme in this channel.',
-          'Give someone a compliment.',
-          'Message a workmate you haven’t spoken to in a while.',
-          'Post a joke in the slack channel.',
-          'Eat a healthy snack.',
-          'Listen to this song or music playlist.',
-          'Call/text someone important in life eg. parents.',
-          'Dance break (link for them song or have them reply their favorite song).',
-          'Add a serving of fruits or veggies to your lunch.',
-          'Setup a game night with your team / workmates.'
+          'Read at least 10 pages of a book. 📕',
+          'Eat a healthy snack. 🍎',
+          'Hang out with a workmate. 💙🧡',
+          'Go outside and take a walk. 🚶‍♂️🚶‍♀️', 
+          'Try a new restaurant. 🍗',
+          'Go for a bike ride. 🚲',
+          'Share a pic of your favorite hobby. 📸',
+          'Switch it up & try a new workspace (i.e. coffee shop, living room, etc.) 🧑‍💻👩‍💻',
+          'Post a funny meme in this channel. 😆',
+          'Give someone a compliment. 😊',
+          'Message a workmate you haven’t spoken to in a while. 🤳',
+          'Post a joke in the slack channel. 😂',
+          'Eat a healthy snack. 🍎',
+          'Listen to this song or music playlist. 🎧',
+          'Call/text someone important in life eg. parents. 📞',
+          'Dance break! 🕺💃',
+          'Add a serving of fruits or veggies to your lunch. 🥕',
+          'Setup a game night with your team / workmates. 🎲'
         ]
-  
+
     def printOutTasks(self):
       print("These are the current tasks we have: ")
       for task in self.wellness_tasks:
@@ -40,34 +42,24 @@ class WellBeingBot:
 
     # Add a user to the game
     def add_user(self, user_id, user_real_name):
-      self.users_to_points[user_id] = 0
-      self.user_id_to_real_name[user_id] = user_real_name
+      if user_id not in self.excluded_users:
+        self.users_to_points[user_id] = 0
+        self.user_id_to_real_name[user_id] = user_real_name
 
     
     # Adds points to user's score when a photo is uploaded
-    def add_points(self, user, points):
-      self.users_to_points[user] += points
+    def add_points(self, user_id, points):
+      if user_id not in self.excluded_users:    
+        self.users_to_points[user_id] += points
 
     # Gets user's current score
-    def get_score(self, userId):
-        return self.users_to_points[userId]
-
-    # Gets the top 3 users with the highest scores
-    # there is the dictionary we can use to map back to the names like a tie (Currently it doesn't like it would be 10 10 9 if sorted) #duuplicates yea
-    # 
-    # 
-   
-    #IF TIME: get the sorted_values >>> eliminate duplicates >> and find any key with those values for 1,2,3
-  
-    #would list.index work? 
-    # yea that works
-    #https://www.geeksforgeeks.org/python-get-key-from-value-in-dictionary/
-    #idk if this returns just one index or has potential to return a list of keys that match though
-    #iterating through may be easier for the sake of time perhaps 
+    def get_score(self, user_id):
+      if user_id not in self.excluded_users:
+        return self.users_to_points[user_id]
 
     # Gets the winners of the game
     # Return Type: Dictionary
-    # Example Return: {1 : ["User1", "User3"], 2 : ["User2"], 3 : []}
+    # Example Return: ex: {1 : [("User1", 10), ("User3", 10)], 2 : [("User2", 8)], 3 : []}
     def topScores(self):
         numUsers = len(self.users_to_points)
         winnerDict = {1 : list(), 2 : list(), 3 : list()}
@@ -89,10 +81,13 @@ class WellBeingBot:
 
           # If next top score matches previous score add to same place on podium 
           if sorted_users_by_score[indexOfDict][1] == previousScore: 
-            winnerDict[currentPlace].append( self.user_id_to_real_name[ user_id ] ) 
+            winnerDict[currentPlace].append( (self.user_id_to_real_name[ user_id ], user_score) ) 
           else: # First winner in next podium spot
             currentPlace += 1
-            winnerDict[currentPlace].append( self.user_id_to_real_name[ user_id ] )
+            # No fourth place, exit loop
+            if currentPlace > 3:
+              break
+            winnerDict[currentPlace].append( (self.user_id_to_real_name[ user_id ], user_score) )
           previousScore = user_score
           # traverse list
           indexOfDict += 1
@@ -103,21 +98,13 @@ class WellBeingBot:
     def resetScores(self):
         for key in users_to_points:
               users_to_points[key] = 0
-
-    #def announceResults(self):
-    #  winners = topScores()
-    #  resetScores()
-    #  return winners
-
-    def resetScores(self):
-      pass
     
-    def send_wellnesstask(self):
+    def send_wellnesstask(self):  
       random_idx = random.randint(0,len(self.wellness_tasks) - 1)
       task = self.wellness_tasks[random_idx]
 
       # TODO: Add emojis if possible
-      message = 'Good Morning!\n\nHere is your daily wellness challenge.\n' + task + '\n\nBe sure to upload an image to receive points. Have a wonderful workday!'
+      message = 'Good Morning! 🌅\n\nHere is your daily wellness challenge:\n' + task + '\n\nBe sure to upload an image to receive extra points. Popular posts earn extra points!\nHave a wonderful workday!'
       return message
 
 

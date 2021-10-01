@@ -4,7 +4,6 @@ import os
 import time
 import schedule
 import logging
-import re
 from slack_sdk import WebClient
 from pathlib import Path
 from dotenv import load_dotenv
@@ -33,8 +32,9 @@ wellBeingBot = WellBeingBot()
 general: C02G8PBQNBC 
 random channel: C02GAUEAGCU
 test: C02GAFV39K7
+hackathon: C02GAUM90R2
 '''
-CHANNEL_ID = "C02GAFV39K7"
+CHANNEL_ID = "C02GAUM90R2"
 BOT_ID = "U02FU4B08CX"
 
 # Add members to the Well Being Bot
@@ -43,6 +43,9 @@ def save_users(users_array):
     #client.chat_postMessage(channel="#random", text="These are our members: ")
     for user in users_array:
         # Key user info on their unique user ID
+        # don't add slackbot and WellBeingBot to leaderboard
+        #if user["id"] == "USLACKBOT" or user["id"] == BOT_ID:
+        #    continue
         user_id = user["id"]
         user_real_name = user["real_name"]
 
@@ -61,55 +64,58 @@ try:
 except SlackApiError as e:
     logger.error("Error creating conversation: {}".format(e))
 
-print("------------------------------------------TEST")
-
-# After every 10mins  is called. 
-#schedule.every(1).minutes.do(wellBeingBot.printOutTasks)
-
-# Loop so that the scheduling task
-# keeps on running all time.
 response = client.conversations_history(channel = CHANNEL_ID) 
-# for message in response["messages"]:
-#     print("Message Content: " + str(message["text"]))
-#     print("Time sent: " + str(message["ts"]))
-# test = test["messages"]
-
-# print(test)
-
-
 
 
 #init variable
 lastTimeCalculated = 0
 
-#schedule announceResults: final point totals, reset point values
-#schedule.every(1).minutes.do(wellBeingBot.announceResults)
+# Parameters: dictionary ex: {1 : [("User1", 10), ("User3", 10)], 2 : [("User2", 8)], 3 : []}
+# Description: Creates output Text
+def announceResults(winnerDict):
+    # Format the list
+    def listToText(users):
+        listUsersText = ""
+        for i in range(0, len(users)):
+            listUsersText += users[i][0] + " (Score: " + str(users[i][1]) + ")"
+            if i != len(users) - 1:
+                listUsersText += ", "
+        return listUsersText
 
-#Schedule 
-# - announceResults : announces top 3, resets all scores to zero
-# - sendWellnessTask: outputs random wellness task 
-# <IF TIME ALLOWS> - sendPointUpdate: outputs all scores
+    # Setup Variables
+    outputText = "Here are this week's winners!!!! 🥳 🥳 🎉🎉 \n"
+    counter = 1
 
-#T
-#task
-#task
-#update
-#task
-# announceResults
-
-
- # task ==(30 seconds)==> calculate points => x2 ==> Annouce Results
-
+    # Build output text
+    while counter <= 3:
+        if counter == 1:
+            outputText += "1st Place: "
+        elif counter == 2:
+            outputText += "2nd Place: "
+        elif counter == 3:
+            outputText += "3rd Place: "
+        outputText += listToText(winnerDict[counter])
+        
+        if counter < 3:
+            outputText += "\n"
+        counter += 1
+    
+    client.chat_postMessage(channel=CHANNEL_ID, text=outputText)
+Looptwice = 0
 while True:
   
-    # Checks whether a scheduled task 
-    # is pending to run or not
+    # Send task for users to complete
+    task = wellBeingBot.send_wellnesstask()
+    client.chat_postMessage(channel= CHANNEL_ID, text=task)
+
+    # Time for users to complete task
+    time.sleep(25)
     
     newLastTimeCalculated = 0
     # need to update lasttimecalculated
     response = client.conversations_history(channel = CHANNEL_ID) 
     for message in response["messages"]:
-                #if new message from bot, get reactions to specific message and give out points to users
+        #if new message from bot, get reactions to specific message and give out points to users
         if float(message["ts"]) > lastTimeCalculated and message["user"] == BOT_ID and "reactions" in message.keys():
        # print(message["reactions"] )
             for reaction in message["reactions"]:
@@ -119,20 +125,31 @@ while True:
                     print(wellBeingBot.users_to_points)
             if float(message["ts"]) > newLastTimeCalculated: 
                 newLastTimeCalculated = float(message["ts"])
+                
+        #points for posting photo        
         elif float(message["ts"]) > lastTimeCalculated and "files" in message.keys():
-            wellBeingBot.add_points(message["user"], points = 80)
+            wellBeingBot.add_points(message["user"], points =  5)
             if float(message["ts"]) > newLastTimeCalculated: 
                 newLastTimeCalculated = float(message["ts"])
 
+                
+        #points for users reacting to your message (photo or message)
+        if float(message["ts"]) > lastTimeCalculated and message["user"] != BOT_ID and "reactions" in message.keys():
+            for reaction in message["reactions"]:
+                wellBeingBot.add_points(message["user"], points = reaction["count"])
+            if float(message["ts"]) > newLastTimeCalculated:
+                newLastTimeCalculated = float(message["ts"])
+
+
+    # Update oldest timestamp to calculate points for
     lastTimeCalculated = newLastTimeCalculated    
 
-    task = wellBeingBot.send_wellnesstask()
-    #client.chat_postMessage(channel="#general", text=task)
-    #time.sleep(10)
-    #print(wellBeingBot.announceResults())
-    break
+    # Announce Winners based on points
+    winnerDict = wellBeingBot.topScores()
 
-''' Photo Reaction Conditions 
-        elif message["type"] == "file" and message["type"]["timestamp"] > lastTimeCalculated and
-            message["type"]["user"] == != BOT ID:  
-'''
+    if Looptwice == 0:
+        Looptwice += 1
+        continue
+    else:
+        announceResults(winnerDict)    
+        break
