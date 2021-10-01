@@ -53,32 +53,65 @@ class WellBeingBot:
         return self.users_to_points[userId]
 
     # Gets the top 3 users with the highest scores
+    # there is the dictionary we can use to map back to the names like a tie (Currently it doesn't like it would be 10 10 9 if sorted) #duuplicates yea
+    # 
+    # 
+   
+    #IF TIME: get the sorted_values >>> eliminate duplicates >> and find any key with those values for 1,2,3
+  
+    #would list.index work? 
+    # yea that works
+    #https://www.geeksforgeeks.org/python-get-key-from-value-in-dictionary/
+    #idk if this returns just one index or has potential to return a list of keys that match though
+    #iterating through may be easier for the sake of time perhaps 
+
+    # Gets the winners of the game
+    # Return Type: Dictionary
+    # Example Return: {1 : ["User1", "User3"], 2 : ["User2"], 3 : []}
     def topScores(self):
-        #Sort scores
-        sorted_values = sorted(self.users_to_points.values()) # Sort the values
         numUsers = len(self.users_to_points)
-        counter = 0
-        while counter < 3 and counter < numUsers:
-          print(sorted_values[counter])
-          counter += 1
+        winnerDict = {1 : list(), 2 : list(), 3 : list()}
 
-    def calculate_points(self, messages): #BASED OFF OF A REACTION.GET Response 
-        if message["type"] == "message" and message["type"]["timestamp"] > lastTimeCalculated and 
-            message["type"]["user"] == BOT ID:
+        #Edge case 
+        if numUsers == 0:
+          return winnerDict
+        
+        # Sort scores and setup variables
+        sorted_users_by_score = sorted(self.users_to_points.items(), key=lambda item: item[1], reverse=True)
+        currentPlace = 1
+        indexOfDict = 0
+        previousScore = sorted_users_by_score[0][1]
+        
+        # Use sorted list to determine winners
+        while currentPlace <= 3 and indexOfDict < numUsers:
+          user_id = sorted_users_by_score[indexOfDict][0] 
+          user_score = sorted_users_by_score[indexOfDict][1]
 
-        elif message["type"] == "file" and message["type"]["timestamp"] > lastTimeCalculated and
-            message["type"]["user"] == != BOT ID:  
+          # If next top score matches previous score add to same place on podium 
+          if sorted_users_by_score[indexOfDict][1] == previousScore: 
+            winnerDict[currentPlace].append( self.user_id_to_real_name[ user_id ] ) 
+          else: # First winner in next podium spot
+            currentPlace += 1
+            winnerDict[currentPlace].append( self.user_id_to_real_name[ user_id ] )
+          previousScore = user_score
+          # traverse list
+          indexOfDict += 1
+        
+        return winnerDict
+          
 
+    def resetScores(self):
+        for key in users_to_points:
+              users_to_points[key] = 0
 
-        #if(message["user"] == ) # users who reacted get point for completion
-        #else() # user posted a photo completing a task  wellbeing bot: U02FU4B08CX
+    #def announceResults(self):
+    #  winners = topScores()
+    #  resetScores()
+    #  return winners
 
-
-        #print("Message Content: " + str(message["text"]))
-        #print("Time sent: " + str(message["ts"]))
-
-
-    # Selects a random wellness task and outputs a message to the channel
+    def resetScores(self):
+      pass
+    
     def send_wellnesstask(self):
       random_idx = random.randint(0,len(self.wellness_tasks) - 1)
       task = self.wellness_tasks[random_idx]
